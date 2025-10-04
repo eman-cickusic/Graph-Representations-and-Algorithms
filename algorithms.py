@@ -3,7 +3,6 @@ import heapq
 import math
 from grid import Node, Grid
 
-# --- Helper Functions (Unchanged) ---
 def _heuristic(node_a, node_b):
     return abs(node_a.row - node_b.row) + abs(node_a.col - node_b.col)
 
@@ -20,7 +19,6 @@ def _reconstruct_path(end_node):
         current_node = current_node.parent
     return path[::-1]
 
-# --- Core A* Algorithm (Unchanged) ---
 def a_star_search(draw_callback, grid, start_node, end_node, weight=1.0):
     grid.reset_pathfinding_data()
     open_set_heap = []
@@ -58,7 +56,6 @@ def a_star_search(draw_callback, grid, start_node, end_node, weight=1.0):
             closed_set.add(current_node)
     return False, {}
 
-# --- Algorithm Wrappers (MODIFIED) ---
 
 def dijkstra_search(draw_callback, grid, start_node, end_node):
     """
@@ -72,4 +69,5 @@ def weighted_a_star_search(draw_callback, grid, start_node, end_node, weight=1.5
     Weighted A* with a default weight of 1.5.
     We now pass the draw_callback through.
     """
+
     return a_star_search(draw_callback, grid, start_node, end_node, weight=weight)
