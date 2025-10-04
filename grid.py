@@ -1,4 +1,3 @@
-# You will need this for the heuristic calculation later
 import math
 
 class Node:
@@ -71,11 +70,10 @@ class Grid:
         This implementation allows for 8-directional movement (including diagonals).
         """
         neighbors = []
-        # Possible movements: N, S, E, W, NE, NW, SE, SW
         for dr in [-1, 0, 1]:
             for dc in [-1, 0, 1]:
                 if dr == 0 and dc == 0:
-                    continue  # This is the node itself
+                    continue  
 
                 r, c = node.row + dr, node.col + dc
 
@@ -91,7 +89,6 @@ class Grid:
             for node in row:
                 node.reset()
 
-# --- Example Usage (for testing if you wish) ---
 if __name__ == '__main__':
     # Create a 10x10 grid
     my_grid = Grid(10, 10)
@@ -111,4 +108,5 @@ if __name__ == '__main__':
 
     # Reset the grid for a new pathfinding run
     my_grid.reset_pathfinding_data()
+
     print("Grid pathfinding data has been reset.")
