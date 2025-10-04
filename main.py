@@ -3,11 +3,8 @@ import time
 from grid import Grid, Node
 from algorithms import a_star_search, dijkstra_search, weighted_a_star_search
 
-# --- Constants ---
-# NEW: Smaller window size to fit on more screens
-WIDTH, HEIGHT = 600, 680 # Made slightly taller to accommodate text at the bottom
+WIDTH, HEIGHT = 600, 680 
 
-# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREY = (128, 128, 128)
@@ -17,17 +14,14 @@ BLUE = (64, 200, 224)
 TURQUOISE = (175, 238, 238)
 ORANGE = (255, 215, 180)
 
-# --- Pygame Setup ---
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pathfinding Visualizer")
 pygame.font.init()
 FONT = pygame.font.SysFont('arial', 18)
 
-# --- Helper and Drawing Functions ---
 def get_clicked_pos(pos, rows, width):
     gap = width // rows
     y, x = pos
-    # Prevent clicks outside the grid area from crashing
     if y >= width: return -1, -1 
     row = y // gap
     col = x // gap
@@ -58,26 +52,21 @@ def draw_grid_lines(win, rows, width):
 def draw(win, grid_obj, rows, width, start_node=None, end_node=None, open_set=None, closed_set=None, path=None, algo_name="", metrics=None):
     win.fill(WHITE)
     
-    # --- NEW: Draw information text INSIDE the window ---
-    grid_area_height = width # Grid is square
+    grid_area_height = width 
     
-    # Draw algorithm and controls info
     info_text_1 = FONT.render(f"Algorithm: {algo_name}", True, BLACK)
     win.blit(info_text_1, (10, grid_area_height + 5))
     info_text_2 = FONT.render("(A)Star | (D)ijkstra | (W)eighted A* | SPACE to run, C to clear", True, BLACK)
     win.blit(info_text_2, (10, grid_area_height + 25))
 
-    # Draw performance metrics if they exist
     if metrics:
         metrics_text = FONT.render(f"Time: {metrics['time']:.4f}s | Path Length: {metrics['length']} | Nodes Explored: {metrics['explored']}", True, BLACK)
         win.blit(metrics_text, (10, grid_area_height + 50))
     
-    # Draw the grid and nodes
     draw_nodes(win, grid_obj, rows, width, start_node, end_node, open_set, closed_set, path)
     draw_grid_lines(win, rows, width)
     pygame.display.update()
 
-# --- Main Application Loop ---
 def main(win, width):
     GRID_WIDTH = width
     ROWS = 40
@@ -98,7 +87,7 @@ def main(win, width):
             if pygame.mouse.get_pressed()[0]:
                 pos = pygame.mouse.get_pos()
                 row, col = get_clicked_pos(pos, ROWS, GRID_WIDTH)
-                if row != -1: # Ensure click is within grid
+                if row != -1: 
                     node = grid.get_node(row, col)
                     if node:
                         if not start_node and node != end_node: start_node = node
@@ -123,7 +112,7 @@ def main(win, width):
                     algorithm_func, algorithm_name = weighted_a_star_search, "Weighted A* (1.5x)"
 
                 if event.key == pygame.K_SPACE and start_node and end_node:
-                    # --- NEW: Calculate metrics ---
+                
                     total_explored = 0
                     start_time = time.time()
                     
@@ -150,4 +139,5 @@ def main(win, width):
     pygame.quit()
 
 if __name__ == "__main__":
+
     main(WIN, WIDTH)
