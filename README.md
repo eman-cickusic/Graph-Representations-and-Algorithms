@@ -11,7 +11,7 @@ A comprehensive Python-based visualization tool for comparing multiple pathfindi
 - **Performance Benchmarking**: Automated comparison of all algorithms with detailed metrics
 - **Visual Analytics**: Matplotlib-powered charts comparing execution time, path length, and nodes explored
 
-## Prerequisites
+## Prerequisites 
 
 - Python 3.7+
 - pip (Python package manager)
