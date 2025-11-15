@@ -64,6 +64,8 @@ Hold while left-clicking to paint terrain:
 - `M` - Generate random maze
 - `X` - Run benchmark (compares all algorithms)
 - `C` - Clear grid
+- `H` - Toggle guided hint overlay (`N` = next hint, `R` = resume auto mode)
+- `V` - Show/hide the on-screen benchmark summary panel
 
 ### Visual Indicators
 

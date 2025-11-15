@@ -107,8 +107,9 @@ def draw_grid_lines(win, rows, width):
         pygame.draw.line(win, GREY, (0, i * gap), (width, i * gap))
         for j in range(rows):
             pygame.draw.line(win, GREY, (j * gap, 0), (j * gap, width))
-def draw(win, grid_obj, rows, width, start_node=None, end_node=None, open_set=None, closed_set=None, path=None, algo_name="", metrics=None, open_set_bwd=None, closed_set_fwd=None, closed_set_bwd=None, hint_payload=None):
+def draw(win, grid_obj, rows, width, start_node=None, end_node=None, open_set=None, closed_set=None, path=None, algo_name="", metrics=None, open_set_bwd=None, closed_set_fwd=None, closed_set_bwd=None, hint_payload=None, hints_visible=True, benchmark_overlay=None):
     win.fill(WHITE)
+    draw_hint_callout(win, hint_payload, hints_visible, width)
     grid_area_height = width
     info_text_1 = FONT.render(f"Algorithm: {algo_name}", True, BLACK)
     win.blit(info_text_1, (10, grid_area_height + 5))
@@ -118,7 +119,7 @@ def draw(win, grid_obj, rows, width, start_node=None, end_node=None, open_set=No
     if algo_name == "Theta* (Any-Angle)":
         warning_text = SMALL_FONT.render("(NOTE: Any-angle shortcuts may ignore some terrain costs)", True, (200, 100, 0))
         win.blit(warning_text, (info_text_1.get_width() + 15, grid_area_height + 8))
-    info_text_2 = FONT.render("C: Clear | M: Maze | X: Benchmark | SPACE: Run", True, BLACK)
+    info_text_2 = FONT.render("C: Clear | M: Maze | X: Benchmark | V: Toggle Stats | SPACE: Run", True, BLACK)
     win.blit(info_text_2, (10, grid_area_height + 25))
     info_text_3 = FONT.render("Select: A/D/W/J/T/B | Paint: 1-Swamp 2-Road 0-Erase", True, BLACK)
     win.blit(info_text_3, (10, grid_area_height + 45))
@@ -129,6 +130,7 @@ def draw(win, grid_obj, rows, width, start_node=None, end_node=None, open_set=No
         draw_hint_bar(win, hint_payload, width, grid_area_height + 95)
     draw_nodes(win, grid_obj, rows, width, start_node, end_node, open_set, closed_set, path, open_set_bwd, closed_set_fwd, closed_set_bwd)
     draw_grid_lines(win, rows, width)
+    draw_benchmark_panel(win, benchmark_overlay, width)
 
 def draw_hint_bar(win, hint_payload, width, start_y):
     """Renders the hint bar with the current tutorial step."""
@@ -147,6 +149,82 @@ def draw_hint_bar(win, hint_payload, width, start_y):
     status = "Manual hint mode (press R to re-sync)" if hint_payload["manual"] else "Hints auto-track your progress"
     controls_surface = SMALL_FONT.render(f"{status} | H: Toggle  N: Next step", True, (90, 90, 90))
     win.blit(controls_surface, (10, start_y + bar_height - 18))
+
+def draw_hint_callout(win, hint_payload, hints_visible, width):
+    """Small overlay inside the grid so guidance is always visible."""
+    callout_width = min(320, width - 20)
+    callout_height = 70
+    panel_surface = pygame.Surface((callout_width, callout_height), pygame.SRCALPHA)
+    if hints_visible and hint_payload:
+        panel_surface.fill((255, 255, 255, 235))
+    else:
+        panel_surface.fill((255, 235, 220, 235))
+    win.blit(panel_surface, (10, 10))
+    pygame.draw.rect(win, GREY, pygame.Rect(10, 10, callout_width, callout_height), 1, border_radius=6)
+    if hints_visible and hint_payload:
+        title = f"Step {hint_payload['number']}/{hint_payload['total']}: {hint_payload['title']}"
+        title_surface = SMALL_FONT.render(title, True, BLACK)
+        win.blit(title_surface, (16, 16))
+        condensed_detail = textwrap.shorten(hint_payload["detail"], width=55, placeholder="...")
+        detail_surface = SMALL_FONT.render(condensed_detail, True, (60, 60, 60))
+        win.blit(detail_surface, (16, 34))
+        mode = "Manual" if hint_payload["manual"] else "Auto"
+        controls_surface = SMALL_FONT.render(f"{mode} | H: Toggle  N: Next  R: Auto", True, (95, 95, 95))
+        win.blit(controls_surface, (16, 52))
+    else:
+        msg = "Hints hidden - press H to show guided steps"
+        msg_surface = SMALL_FONT.render(msg, True, (120, 60, 30))
+        win.blit(msg_surface, (16, 32))
+
+def draw_benchmark_panel(win, overlay_data, width):
+    """Displays a compact benchmark summary or warning inside the grid."""
+    if not overlay_data or not overlay_data.get("visible", False):
+        return
+    panel_width = min(330, width - 20)
+    success = overlay_data.get("success", False)
+    base_height = 150 if success else 100
+    panel_height = base_height
+    x = width - panel_width - 10
+    y = 10
+    panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+    panel_surface.fill((15, 30, 60, 220))
+    win.blit(panel_surface, (x, y))
+    pygame.draw.rect(win, (40, 120, 200), pygame.Rect(x, y, panel_width, panel_height), 1, border_radius=6)
+    timestamp = overlay_data.get("timestamp")
+    if timestamp:
+        stamp_text = time.strftime("%H:%M:%S", time.localtime(timestamp))
+    else:
+        stamp_text = ""
+    if success:
+        header = SMALL_FONT.render(f"Benchmark Snapshot {stamp_text}", True, WHITE)
+        win.blit(header, (x + 10, y + 8))
+        results = overlay_data.get("results", {})
+        if results:
+            fastest_name, fastest_stats = min(results.items(), key=lambda item: item[1]["time"])
+            fastest_surface = SMALL_FONT.render(f"Fastest: {fastest_name} ({fastest_stats['time']:.2f} ms)", True, WHITE)
+            win.blit(fastest_surface, (x + 10, y + 32))
+            explored_name, explored_stats = min(results.items(), key=lambda item: item[1]["explored"])
+            explored_surface = SMALL_FONT.render(f"Least explored: {explored_name} ({explored_stats['explored']})", True, WHITE)
+            win.blit(explored_surface, (x + 10, y + 50))
+            path_candidates = [(n, s) for n, s in results.items() if isinstance(s["path_len"], (int, float))]
+            if path_candidates:
+                shortest_name, shortest_stats = min(path_candidates, key=lambda item: item[1]["path_len"])
+                path_surface = SMALL_FONT.render(f"Shortest path: {shortest_name} ({shortest_stats['path_len']})", True, WHITE)
+            else:
+                path_surface = SMALL_FONT.render("Shortest path: N/A", True, WHITE)
+            win.blit(path_surface, (x + 10, y + 68))
+        controls_surface = SMALL_FONT.render("X: re-run benchmark | V: Hide panel", True, (200, 200, 200))
+        win.blit(controls_surface, (x + 10, y + panel_height - 22))
+    else:
+        header = SMALL_FONT.render("Benchmark Unavailable", True, WHITE)
+        win.blit(header, (x + 10, y + 8))
+        message = overlay_data.get("message", "Set start & end nodes first.")
+        lines = textwrap.wrap(message, width=38)
+        for idx, line in enumerate(lines[:2]):
+            message_surface = SMALL_FONT.render(line, True, (230, 200, 200))
+            win.blit(message_surface, (x + 10, y + 32 + (idx * 18)))
+        controls_surface = SMALL_FONT.render("Add start/end nodes | V: Hide panel", True, (200, 200, 200))
+        win.blit(controls_surface, (x + 10, y + panel_height - 22))
 
 # --- Benchmarking and Visualization Functions ---
 
@@ -187,9 +265,11 @@ def visualize_benchmark_results(results):
     
     plt.show()
 
-def run_benchmark(grid, start_node, end_node):
+def run_benchmark(grid, start_node, end_node, show_plot=True):
     if not start_node or not end_node:
-        print("\n[BENCHMARK FAILED] Please set a start and end node first."); return
+        warning = "Please set a start and end node first."
+        print(f"\n[BENCHMARK FAILED] {warning}")
+        return False, warning
     algorithms_to_test = {"A*": a_star_search, "Dijkstra": dijkstra_search, "Weighted A*": weighted_a_star_search, "Theta*": theta_star_search, "Bidirectional": bidirectional_search, "JPS": jps_search}
     results = {}
     for name, func in algorithms_to_test.items():
@@ -202,7 +282,9 @@ def run_benchmark(grid, start_node, end_node):
     for name, res in results.items():
         print(f"{name:<15} | {res['time']:<10.3f} | {str(res['path_len']):<10} | {res['explored']:<10}")
     print("="*50)
-    visualize_benchmark_results(results)
+    if show_plot:
+        visualize_benchmark_results(results)
+    return True, results
 
 # --- Main Application Loop ---
 def main(win, width):
@@ -212,14 +294,15 @@ def main(win, width):
     run = True
     algorithm_func = a_star_search; algorithm_name = "A* Search"
     last_metrics = None
+    benchmark_overlay = None
     hint_controller = HintController()
     while run:
         hint_controller.update(start_node, end_node, last_metrics)
         current_hint = hint_controller.get_payload(algorithm_name) if hint_controller.visible else None
         if algorithm_name == "Bidirectional Search":
-             draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, algo_name=algorithm_name, metrics=last_metrics, closed_set_fwd=set(), closed_set_bwd=set(), hint_payload=current_hint)
+             draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, algo_name=algorithm_name, metrics=last_metrics, closed_set_fwd=set(), closed_set_bwd=set(), hint_payload=current_hint, hints_visible=hint_controller.visible, benchmark_overlay=benchmark_overlay)
         else:
-            draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, algo_name=algorithm_name, metrics=last_metrics, hint_payload=current_hint)
+            draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, algo_name=algorithm_name, metrics=last_metrics, hint_payload=current_hint, hints_visible=hint_controller.visible, benchmark_overlay=benchmark_overlay)
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT: run = False
@@ -233,12 +316,15 @@ def main(win, width):
                             if not start_node and node != end_node:
                                 start_node = node
                                 last_metrics = None
+                                benchmark_overlay = None
                             elif not end_node and node != start_node:
                                 end_node = node
                                 last_metrics = None
+                                benchmark_overlay = None
                             elif node != end_node and node != start_node:
                                 node.set_obstacle(True)
                                 last_metrics = None
+                                benchmark_overlay = None
             elif pygame.mouse.get_pressed()[2]:
                 pos = pygame.mouse.get_pos(); row, col = get_clicked_pos(pos, ROWS, GRID_WIDTH)
                 if row != -1:
@@ -252,6 +338,7 @@ def main(win, width):
                         if was_end: end_node = None
                         if was_obstacle or was_start or was_end:
                             last_metrics = None
+                            benchmark_overlay = None
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a: algorithm_func, algorithm_name = a_star_search, "A* Search"
                 if event.key == pygame.K_d: algorithm_func, algorithm_name = dijkstra_search, "Dijkstra's Algorithm"
@@ -259,8 +346,21 @@ def main(win, width):
                 if event.key == pygame.K_j: algorithm_func, algorithm_name = jps_search, "Jump Point Search"
                 if event.key == pygame.K_t: algorithm_func, algorithm_name = theta_star_search, "Theta* (Any-Angle)"
                 if event.key == pygame.K_b: algorithm_func, algorithm_name = bidirectional_search, "Bidirectional Search"
-                if event.key == pygame.K_m: grid.generate_maze(); start_node, end_node, last_metrics = None, None, None
-                if event.key == pygame.K_x: run_benchmark(grid, start_node, end_node)
+                if event.key == pygame.K_m:
+                    grid.generate_maze()
+                    start_node, end_node, last_metrics = None, None, None
+                    benchmark_overlay = None
+                if event.key == pygame.K_x:
+                    success, payload = run_benchmark(grid, start_node, end_node)
+                    benchmark_overlay = {"success": success, "visible": True, "timestamp": time.time()}
+                    if success:
+                        benchmark_overlay["results"] = payload
+                        benchmark_overlay["message"] = None
+                    else:
+                        benchmark_overlay["results"] = None
+                        benchmark_overlay["message"] = payload
+                if event.key == pygame.K_v and benchmark_overlay:
+                    benchmark_overlay["visible"] = not benchmark_overlay["visible"]
                 if event.key == pygame.K_h: hint_controller.toggle_visibility()
                 if event.key == pygame.K_n: hint_controller.next_step()
                 if event.key == pygame.K_r: hint_controller.resume_auto()
@@ -269,9 +369,9 @@ def main(win, width):
                     def callback_handler(*args, **kwargs):
                         hint_payload = hint_controller.get_payload(algorithm_name) if hint_controller.visible else None
                         if algorithm_name == "Bidirectional Search":
-                            draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, open_set=args[0], closed_set_fwd=args[1], open_set_bwd=args[2], closed_set_bwd=args[3], algo_name=algorithm_name, hint_payload=hint_payload)
+                            draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, open_set=args[0], closed_set_fwd=args[1], open_set_bwd=args[2], closed_set_bwd=args[3], algo_name=algorithm_name, hint_payload=hint_payload, hints_visible=hint_controller.visible, benchmark_overlay=benchmark_overlay)
                         else:
-                            draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, **kwargs, algo_name=algorithm_name, hint_payload=hint_payload)
+                            draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, **kwargs, algo_name=algorithm_name, hint_payload=hint_payload, hints_visible=hint_controller.visible, benchmark_overlay=benchmark_overlay)
                         pygame.display.update()
                     found, path, total_explored = algorithm_func(callback_handler, grid, start_node, end_node)
                     end_time = time.time()
@@ -280,12 +380,14 @@ def main(win, width):
                     hint_controller.update(start_node, end_node, last_metrics)
                     post_run_hint = hint_controller.get_payload(algorithm_name) if hint_controller.visible else None
                     if found:
-                        draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, path=path, algo_name=algorithm_name, metrics=last_metrics, hint_payload=post_run_hint)
+                        draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, path=path, algo_name=algorithm_name, metrics=last_metrics, hint_payload=post_run_hint, hints_visible=hint_controller.visible, benchmark_overlay=benchmark_overlay)
                     else:
-                        draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, algo_name=algorithm_name, metrics=last_metrics, hint_payload=post_run_hint)
+                        draw(win, grid, ROWS, GRID_WIDTH, start_node, end_node, algo_name=algorithm_name, metrics=last_metrics, hint_payload=post_run_hint, hints_visible=hint_controller.visible, benchmark_overlay=benchmark_overlay)
                     pygame.display.update()
                 if event.key == pygame.K_c:
-                    grid = Grid(ROWS, ROWS); start_node, end_node, last_metrics = None, None, None
+                    grid = Grid(ROWS, ROWS)
+                    start_node, end_node, last_metrics = None, None, None
+                    benchmark_overlay = None
         keys = pygame.key.get_pressed(); mouse_buttons = pygame.mouse.get_pressed()
         if mouse_buttons[0]:
             pos = pygame.mouse.get_pos(); row, col = get_clicked_pos(pos, ROWS, GRID_WIDTH)
@@ -307,6 +409,7 @@ def main(win, width):
                         changed = True
                     if changed:
                         last_metrics = None
+                        benchmark_overlay = None
     pygame.quit()
 
 if __name__ == "__main__":
